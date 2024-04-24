@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details</title>
+    <style>
+        /* Your CSS styles remain here */
+        /* Add your CSS styles here */
+        @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,500;0,600;0,700;0,800;1,600&display=swap");
+
+        /* Define CSS variables */
+        :root {
+          --primary-color: #7380ec;
+          --danger-color: #ff7782;
+          --success-color: #41f1b6;
+          --white-color: #fff;
+          --dark-color: #363949;
+          --font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+          font-family: var(--font-family);
+          background-color: var(--white-color);
+          margin: 0;
+          padding: 0;
+        }
+
+        .container {
+          max-width: 800px;
+          margin: 50px auto;
+          padding: 20px;
+          border-radius: 10px;
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+          text-align: center;
+          color: var(--dark-color);
+          margin-bottom: 20px;
+        }
+
+        /* Product details wrapper */
+        .product-details {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        /* Product detail item */
+        .product-detail {
+          display: flex;
+          align-items: center;
+          padding: 15px;
+          background-color: #f9f9f9;
+          border-radius: 10px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          font-size: 1.1rem; /* Adjust font size */
+        }
+
+        .product-detail span {
+          font-weight: bold;
+          margin-right: 10px;
+          min-width: 150px; /* Ensure consistent width for labels */
+        }
+
+        .product-detail p {
+          margin: 0;
+        }
+    </style>
+</head>
+<body>
+    {% if product_details %}
+    <div class="container">
+        <h1>Product Details</h1>
+        <div class="product-details">
+            <div class="product-detail">
+                <span>Product ID:</span>
+                <p>{{ product_details[0] }}</p>
+            </div>
+            <div class="product-detail">
+                <span>Product Name:</span>
+                <p>{{ product_details[1] }}</p>
+            </div>
+            <div class="product-detail">
+                <span>Category:</span>
+                <p>{{ product_details[2] }}</p>
+            </div>
+            <div class="product-detail">
+                <span>Quantity in Stock:</span>
+                <p>{{ product_details[3] }}</p>
+            </div>
+            <div class="product-detail">
+                <span>Unit Price:</span>
+                <p>{{ product_details[4] }}</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>{{ error_message }}</p>
+    {% endif %}
+</body>
+</html>
