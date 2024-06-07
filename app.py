@@ -1,18 +1,28 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for
 import pymysql
 
 app = Flask(__name__)
 
+# Define global variables
 User_Email = ""
-# Connect to MySQL database
-db = pymysql.connect(
-    host="149.100.151.103",
-    user="u212553073_nikhil_pro1",
-    password="l!LWR!R@p8",
-    database="u212553073_nikhil_pro1"
-)
+db = None
+cursor = None
 
-cursor = db.cursor()
+def connect_to_database():
+    global db, cursor
+    try:
+        db = pymysql.connect(
+            host="149.100.151.103",
+            user="u212553073_nikhil_pro1",
+            password="l!LWR!R@p8",
+            database="u212553073_nikhil_pro1"
+        )
+        cursor = db.cursor()
+    except pymysql.Error as e:
+        print(f"Error connecting to MySQL database: {e}")
+
+# Connect to database when the app starts
+connect_to_database()
 
 @app.route('/')
 def home():
@@ -28,18 +38,22 @@ def login():
     email = request.form['email']
     password = request.form['password']
 
-    query = "SELECT Position FROM employees WHERE Email = %s AND Password = %s"
-    cursor.execute(query, (email, password))
-    position = cursor.fetchone()
+    try:
+        query = "SELECT Position FROM employees WHERE Email = %s AND Password = %s"
+        cursor.execute(query, (email, password))
+        position = cursor.fetchone()
 
-    if position:
-        User_Email = email
-        if position[0] == 'Manager':
-            return redirect(url_for('manager_dashboard'))
-        elif position[0] == 'employee':
-            return redirect(url_for('employee_dashboard'))
-    else:
-        return render_template('login.html', message="Invalid credentials")
+        if position:
+            User_Email = email
+            if position[0] == 'Manager':
+                return redirect(url_for('manager_dashboard'))
+            elif position[0] == 'employee':
+                return redirect(url_for('employee_dashboard'))
+        else:
+            return render_template('login.html', message="Invalid credentials")
+    except pymysql.Error as e:
+        print(f"Error executing SQL query: {e}")
+        return render_template('login.html', message="An error occurred, please try again later")
 
 @app.route('/signout')
 def signout():
@@ -250,5 +264,5 @@ def get_employee_details():
             return render_template('employee_details.html', error_message="Employee not found")
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
 
