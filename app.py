@@ -1,33 +1,18 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-from dbutils.pooled_db import PooledDB
 import pymysql
 
 app = Flask(__name__)
 
 User_Email = ""
-
-# Setup connection pool
-pool = PooledDB(
-    creator=pymysql,
-    maxconnections=10,  # Adjust this number based on your application's needs
-    mincached=2,
-    maxcached=5,
-    blocking=True,
+# Connect to MySQL database
+db = pymysql.connect(
     host="149.100.151.103",
     user="u212553073_nikhil_pro1",
     password="l!LWR!R@p8",
-    database="u212553073_nikhil_pro1",
-    charset='utf8mb4',
-    connect_timeout=30  # Increased timeout
+    database="u212553073_nikhil_pro1"
 )
 
-def get_db_connection():
-    try:
-        return pool.connection()
-    except pymysql.MySQLError as e:
-        print(f"Error connecting to the database: {e}")
-        # You can add logging here if needed
-        return None
+cursor = db.cursor()
 
 @app.route('/')
 def home():
@@ -43,18 +28,9 @@ def login():
     email = request.form['email']
     password = request.form['password']
 
-    conn = get_db_connection()
-    if not conn:
-        return render_template('login.html', message="Database connection error")
-
-    cursor = conn.cursor()
-
     query = "SELECT Position FROM employees WHERE Email = %s AND Password = %s"
     cursor.execute(query, (email, password))
     position = cursor.fetchone()
-
-    cursor.close()
-    conn.close()
 
     if position:
         User_Email = email
@@ -74,16 +50,9 @@ def signout():
 @app.route('/manager/dashboard')
 def manager_dashboard():
     if User_Email:
-        conn = get_db_connection()
-        if not conn:
-            return render_template('login.html', message="Database connection error")
-        
-        cursor = conn.cursor()
-        
         user_query = "SELECT FirstName, LastName, Position FROM employees WHERE Email = %s"
         cursor.execute(user_query, (User_Email,))
         user_data = cursor.fetchone()
-
         cursor.execute("SELECT * FROM customers")
         dataCustomers = cursor.fetchall()
         cursor.execute("SELECT * FROM employees")
@@ -103,9 +72,6 @@ def manager_dashboard():
         cursor.execute("SELECT c.CustomerName, p.ProductName, o.OrderDate FROM orders o JOIN customers c ON o.CustomerID = c.CustomerID JOIN products p ON o.ProductID = p.ProductID ORDER BY o.OrderDate DESC LIMIT 3")
         recentorders = cursor.fetchall()
 
-        cursor.close()
-        conn.close()
-
         if user_data:
             user_name = f"{user_data[0]} {user_data[1]}"
             position = f"{user_data[2]}"
@@ -118,18 +84,9 @@ def manager_dashboard():
 @app.route('/employee/dashboard')
 def employee_dashboard():
     if User_Email:
-        conn = get_db_connection()
-        if not conn:
-            return render_template('login.html', message="Database connection error")
-
-        cursor = conn.cursor()
-
         user_query = "SELECT FirstName, LastName, Department FROM employees WHERE Email = %s"
         cursor.execute(user_query, (User_Email,))
         user_data = cursor.fetchone()
-
-        cursor.close()
-        conn.close()
 
         if user_data:
             department = user_data[2]
@@ -146,12 +103,6 @@ def employee_dashboard():
 
 @app.route('/production/dashboard')
 def production_dashboard():
-    conn = get_db_connection()
-    if not conn:
-        return render_template('login.html', message="Database connection error")
-        
-    cursor = conn.cursor()
-
     user_query = "SELECT FirstName, LastName, Position FROM employees WHERE Email = %s"
     cursor.execute(user_query, (User_Email,))
     user_data = cursor.fetchone()
@@ -163,10 +114,7 @@ def production_dashboard():
     monthsales = cursor.fetchone()
     cursor.execute('SELECT SUM(Quantity), SUM(TotalAmount) FROM orders WHERE YEAR(OrderDate) = YEAR(CURDATE())')
     yearsales = cursor.fetchone()
-
-    cursor.close()
-    conn.close()
-
+    
     return render_template('production_dashboard.html', user_name=user_name, position=position, daysales=daysales, monthsales=monthsales, yearsales=yearsales)
 
 @app.route('/add_product', methods=['POST'])
@@ -177,18 +125,9 @@ def add_product():
         product_quantity = int(request.form['productQuantity'])
         product_price = float(request.form['productPrice'])
 
-        conn = get_db_connection()
-        if not conn:
-            return render_template('production_dashboard.html', message="Database connection error")
-
-        cursor = conn.cursor()
-
         cursor.execute("INSERT INTO products (ProductName, Category, QuantityInStock, UnitPrice) VALUES (%s, %s, %s, %s)", 
                        (product_name, product_category, product_quantity, product_price))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
+        db.commit()
 
         return redirect(url_for('production_dashboard'))
 
@@ -197,17 +136,8 @@ def get_product_details():
     if request.method == 'POST':
         product_id = request.form['productIdToShow']
 
-        conn = get_db_connection()
-        if not conn:
-            return render_template('product_details.html', error_message="Database connection error")
-
-        cursor = conn.cursor()
-
         cursor.execute("SELECT * FROM products WHERE ProductID = %s", (product_id,))
         product_details = cursor.fetchone()
-
-        cursor.close()
-        conn.close()
 
         if product_details:
             return render_template('product_details.html', product_details=product_details)
@@ -220,12 +150,6 @@ def finance_dashboard():
 
 @app.route('/sales/dashboard')
 def sales_dashboard():
-    conn = get_db_connection()
-    if not conn:
-        return render_template('login.html', message="Database connection error")
-
-    cursor = conn.cursor()
-
     user_query = "SELECT FirstName, LastName, Position FROM employees WHERE Email = %s"
     cursor.execute(user_query, (User_Email,))
     user_data = cursor.fetchone()
@@ -241,10 +165,7 @@ def sales_dashboard():
     dataOrders = cursor.fetchall()
     cursor.execute('SELECT * FROM customers')
     dataCustomers = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
+    
     return render_template('sales_dashboard.html', user_name=user_name, position=position, daysales=daysales, monthsales=monthsales, yearsales=yearsales,
                            dataOrders=dataOrders, dataCustomers=dataCustomers)
 
@@ -256,18 +177,9 @@ def add_customer():
         customer_phone = request.form['customerPhone']
         customer_address = request.form['customerAddress']
 
-        conn = get_db_connection()
-        if not conn:
-            return render_template('sales_dashboard.html', message="Database connection error")
-
-        cursor = conn.cursor()
-
         cursor.execute("INSERT INTO customers (CustomerName, ContactNumber, Email, Address) VALUES (%s, %s, %s, %s)", 
                        (customer_name, customer_phone, customer_email, customer_address))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
+        db.commit()
 
         return redirect(url_for('sales_dashboard'))
 
@@ -280,29 +192,14 @@ def add_order():
         quantity = int(request.form['quantity'])
         total_amount = float(request.form['totalAmount'])
 
-        conn = get_db_connection()
-        if not conn:
-            return render_template('sales_dashboard.html', message="Database connection error")
-
-        cursor = conn.cursor()
-
         cursor.execute("INSERT INTO orders (OrderDate, CustomerID, ProductID, Quantity, TotalAmount) VALUES (%s, %s, %s, %s, %s)", 
                        (order_date, customer_id, product_id, quantity, total_amount))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
+        db.commit()
 
         return redirect(url_for('sales_dashboard'))
 
 @app.route('/hr/dashboard')
 def hr_dashboard():
-    conn = get_db_connection()
-    if not conn:
-        return render_template('login.html', message="Database connection error")
-
-    cursor = conn.cursor()
-
     user_query = "SELECT FirstName, LastName, Position FROM employees WHERE Email = %s"
     cursor.execute(user_query, (User_Email,))
     user_data = cursor.fetchone()
@@ -316,9 +213,6 @@ def hr_dashboard():
     totalManagers = cursor.fetchone()[0]
     cursor.execute('SELECT COUNT(*) FROM employees WHERE Gender = "Female"')
     totalFemales = cursor.fetchone()[0]
-
-    cursor.close()
-    conn.close()
 
     return render_template('hr_dashboard.html', dataEmployees=dataEmployees, user_name=user_name, position=position, totalEmployees=totalEmployees, totalManagers=totalManagers, totalFemales=totalFemales)
 
@@ -336,18 +230,9 @@ def add_employee():
         dob = request.form['dob']
         password = request.form['password']
 
-        conn = get_db_connection()
-        if not conn:
-            return render_template('hr_dashboard.html', message="Database connection error")
-
-        cursor = conn.cursor()
-
         cursor.execute("INSERT INTO employees (FirstName, LastName, Email, Phone, Address, Department, Position, Gender, DOB, Password) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", 
                        (first_name, last_name, email, phone, address, department, position, gender, dob, password))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
+        db.commit()
 
         return redirect(url_for('hr_dashboard'))
 
@@ -356,17 +241,8 @@ def get_employee_details():
     if request.method == 'POST':
         employee_id = request.form['employeeIdToShow']
 
-        conn = get_db_connection()
-        if not conn:
-            return render_template('hr_dashboard.html', error_message="Database connection error")
-
-        cursor = conn.cursor()
-
         cursor.execute("SELECT * FROM employees WHERE EmployeeID = %s", (employee_id,))
         employee_details = cursor.fetchone()
-
-        cursor.close()
-        conn.close()
 
         if employee_details:
             return render_template('employee_details.html', employee_details=employee_details)
@@ -375,3 +251,4 @@ def get_employee_details():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
