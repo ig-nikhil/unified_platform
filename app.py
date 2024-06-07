@@ -6,10 +6,10 @@ app = Flask(__name__)
 User_Email = ""
 # Connect to MySQL database
 db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="",
-    database="project_dis"
+    host="149.100.151.103",
+    user="u212553073_nikhil_pro1",
+    password="l!LWR!R@p8",
+    database="u212553073_nikhil_pro1"
 )
 
 cursor = db.cursor()
