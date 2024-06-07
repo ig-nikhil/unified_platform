@@ -8,3 +8,4 @@ MarkupSafe==2.1.5
 Werkzeug==3.0.3
 mysql.connector
 gunicorn
+pymysql
