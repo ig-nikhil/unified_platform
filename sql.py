@@ -1,45 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-import pymysql
-import time
-from datetime import datetime
-
-app = Flask(__name__)
-app.secret_key = 'your_secret_key'
-
-# Establish database connection
-def connect_to_database():
-    try:
-        db = pymysql.connect(
-            host="149.100.151.103",
-            user="u212553073_nikhil_pro1",
-            password="l!LWR!R@p8",
-            database="u212553073_nikhil_pro1"
-        )
-        return db
-    except pymysql.Error as e:
-        print(f"Error connecting to MySQL database: {e}")
-        return None
-
-# Reconnect to the database if connection is lost
-def reconnect_to_database():
-    global db
-    while True:
-        try:
-            db.ping(reconnect=True)
-            print("Reconnected to the database.")
-            return
-        except pymysql.Error as e:
-            print(f"Error reconnecting to MySQL database: {e}")
-            time.sleep(5)  # Wait for 5 seconds before attempting reconnection
 
 
-# Initialize the database connection and cursor
-db = connect_to_database()
-if db is not None:
-    cursor = db.cursor()
-else:
-    print("Failed to connect to the database. Exiting.")
-    exit(1)
+
+
+
+
+
 
 
 @app.route('/')

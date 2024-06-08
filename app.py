@@ -31,22 +31,13 @@ def reconnect_to_database():
         except pymysql.Error as e:
             print(f"Error reconnecting to MySQL database: {e}")
             time.sleep(5)  # Wait for 5 seconds before attempting reconnection
-
-from flask import Flask, render_template, request, redirect, url_for,jsonify
-import mysql.connector
-
-app = Flask(__name__)
-
 User_Email = ""
-# Connect to MySQL database
-db = mysql.connector.connect(
-    host="149.100.151.103",
-    user="u212553073_nikhil_pro1",
-    password="l!LWR!R@p8",
-    database="u212553073_nikhil_pro1"
-)
 
+db = connect_to_database()
 cursor = db.cursor()
+
+
+reconnect_to_database()
 
 @app.route('/')
 def home():
