@@ -22,31 +22,25 @@ def connect_to_database():
 
 # Reconnect to the database if connection is lost
 def reconnect_to_database():
-    global db, cursor
+    global db
     while True:
         try:
             db.ping(reconnect=True)
             print("Reconnected to the database.")
-            cursor = db.cursor()
             return
         except pymysql.Error as e:
             print(f"Error reconnecting to MySQL database: {e}")
             time.sleep(5)  # Wait for 5 seconds before attempting reconnection
 
-# Helper function to execute queries with reconnection logic
-def execute_query(query, args=None):
-    global db, cursor
-    try:
-        cursor.execute(query, args)
-    except (pymysql.err.OperationalError, pymysql.err.InterfaceError):
-        reconnect_to_database()
-        cursor.execute(query, args)
 
-User_Email = ""
-# Initialize database connection and cursor
+# Initialize the database connection and cursor
 db = connect_to_database()
-cursor = db.cursor()
-reconnect_to_database()
+if db is not None:
+    cursor = db.cursor()
+else:
+    print("Failed to connect to the database. Exiting.")
+    exit(1)
+
 
 @app.route('/')
 def home():
@@ -65,7 +59,7 @@ def login():
 
     # Check if user exists and credentials are correct
     query = "SELECT Position FROM employees WHERE Email = %s AND Password = %s"
-    execute_query(query, (email, password))
+    cursor.execute(query, (email, password))
     position = cursor.fetchone()
 
     if position:
@@ -75,9 +69,13 @@ def login():
             return redirect(url_for('manager_dashboard'))
         elif position[0] == 'employee':
             return redirect(url_for('employee_dashboard'))
+    
+        
     else:
         # If user credentials are incorrect, render the login form again
         return render_template('login.html', message="Invalid credentials")
+
+
 
 @app.route('/signout')
 def signout():
@@ -86,41 +84,47 @@ def signout():
     return redirect(url_for('login'))
 
 # Manager dashboard route
+# Manager dashboard route
 @app.route('/manager/dashboard')
 def manager_dashboard():
     if User_Email:
         # Fetch user data from the Employees table
         user_query = "SELECT FirstName, LastName,Position FROM employees WHERE Email = %s"
-        execute_query(user_query, (User_Email,))
+        cursor.execute(user_query, (User_Email,))
         user_data = cursor.fetchone()
-        execute_query("SELECT * FROM customers")
+        cursor.execute("SELECT * FROM customers")
         dataCustomers = cursor.fetchall()
-        execute_query("Select * from employees")
+        cursor.execute("Select * from employees")
         dataEmployees = cursor.fetchall()
-        execute_query("Select * from transactions")
+        cursor.execute("Select * from transactions")
         dataTransactions = cursor.fetchall()
-        execute_query("Select * from products")
+        cursor.execute("Select * from products")
         dataProducts = cursor.fetchall()
-        execute_query("Select * from suppliers")
+        cursor.execute("Select * from suppliers")
         dataSuppliers = cursor.fetchall()
-        execute_query("select sum(TotalAmount)  from orders")
+        cursor.execute("select sum(TotalAmount)  from orders")
         totalsales = cursor.fetchone()[0]
-        execute_query(" select count(*) from employees")
+        cursor.execute(" select count(*) from employees")
         totalemployees = cursor.fetchone()[0]
-        execute_query(" select count(*) from customers")
+        cursor.execute(" select count(*) from customers")
         totalcustomers = cursor.fetchone()[0]
-        execute_query("SELECT c.CustomerName, p.ProductName, o.OrderDate FROM orders o JOIN customers c ON o.CustomerID = c.CustomerID JOIN products p ON o.ProductID = p.ProductID ORDER BY o.OrderDate DESC LIMIT 3 ")
-        recentorders = cursor.fetchall()
+        cursor.execute("SELECT c.CustomerName, p.ProductName, o.OrderDate FROM orders o JOIN customers c ON o.CustomerID = c.CustomerID JOIN products p ON o.ProductID = p.ProductID ORDER BY o.OrderDate DESC LIMIT 3 ")
+        recentorders =cursor.fetchall()
+        # cursor.execute("Select * from inventory")
+        # dataEmployees = cursor.fetchall()
+
+
 
         if user_data:
             user_name = f"{user_data[0]} {user_data[1]} "
             position = f"{user_data[2]}"
-            return render_template('manager_dashboard.html', user_name=user_name, position=position, dataCustomers=dataCustomers,
-                                   dataEmployees=dataEmployees, dataProducts=dataProducts, dataTransactions=dataTransactions,
-                                   dataSuppliers=dataSuppliers, totalsales=totalsales, recentorders=recentorders,
-                                   totalemployees=totalemployees, totalcustomers=totalcustomers)
+            return render_template('manager_dashboard.html', user_name=user_name,position=position,dataCustomers=dataCustomers,
+                                   dataEmployees=dataEmployees,dataProducts=dataProducts,dataTransactions=dataTransactions,
+                                   dataSuppliers=dataSuppliers,totalsales=totalsales,recentorders=recentorders,
+                                   totalemployees=totalemployees,totalcustomers=totalcustomers)
     
     return render_template('login.html')
+
 
 # Employee dashboard route
 @app.route('/employee/dashboard')
@@ -128,7 +132,7 @@ def employee_dashboard():
     if User_Email:
         # Fetch user data from the Employees table
         user_query = "SELECT FirstName, LastName, Department FROM employees WHERE Email = %s"
-        execute_query(user_query, (User_Email,))
+        cursor.execute(user_query, (User_Email,))
         user_data = cursor.fetchone()
 
         if user_data:
@@ -148,18 +152,24 @@ def employee_dashboard():
 @app.route('/production/dashboard')
 def production_dashboard():
     user_query = "SELECT FirstName, LastName,Position FROM employees WHERE Email = %s"
-    execute_query(user_query, (User_Email,))
+    cursor.execute(user_query, (User_Email,))
     user_data = cursor.fetchone()
     user_name = f"{user_data[0]} {user_data[1]} "
     position = f"{user_data[2]}"
-    execute_query('SELECT count(ProductID) FROM products')
+    cursor.execute('SELECT count(ProductID) FROM products')
     daysales = cursor.fetchone()
-    execute_query('SELECT sum(Quantity),sum(TotalAmount) FROM orders WHERE YEAR(OrderDate) = YEAR(CURDATE()) AND MONTH(OrderDate) = MONTH(CURDATE()) ')
+    cursor.execute('SELECT sum(Quantity),sum(TotalAmount) FROM orders WHERE YEAR(OrderDate) = YEAR(CURDATE()) AND MONTH(OrderDate) = MONTH(CURDATE()) ')
     monthsales = cursor.fetchone()
-    execute_query('SELECT sum(Quantity),sum(TotalAmount) FROM orders  WHERE YEAR(OrderDate) = YEAR(CURDATE()) ')
+    cursor.execute('SELECT sum(Quantity),sum(TotalAmount) FROM orders  WHERE YEAR(OrderDate) = YEAR(CURDATE()) ')
     yearsales = cursor.fetchone()
+   # cursor.execute('Select * from orders')
+   # dataOrders=cursor.fetchall()
+   # cursor.execute('Select * from customers')
+   # dataCustomers = cursor.fetchall()
+    
+    return render_template('production_dashboard.html',user_name=user_name,position=position,daysales=daysales,monthsales=monthsales,yearsales=yearsales)
 
-    return render_template('production_dashboard.html', user_name=user_name, position=position, daysales=daysales, monthsales=monthsales, yearsales=yearsales)
+from flask import request, redirect, url_for
 
 @app.route('/add_product', methods=['POST'])
 def add_product():
@@ -171,12 +181,13 @@ def add_product():
         product_price = float(request.form['productPrice'])  # Ensure conversion to float
 
         # Insert data into the products table
-        execute_query("INSERT INTO products (ProductName, Category, QuantityInStock, UnitPrice) VALUES (%s, %s, %s, %s)", 
-                      (product_name, product_category, product_quantity, product_price))
+        cursor.execute("INSERT INTO products (ProductName, Category, QuantityInStock, UnitPrice) VALUES (%s, %s, %s, %s)", 
+                       (product_name, product_category, product_quantity, product_price))
         db.commit()
 
         # Redirect to the sales dashboard after adding the product
         return redirect(url_for('production_dashboard'))
+
 
 @app.route('/get_product_details', methods=['POST'])
 def get_product_details():
@@ -185,7 +196,7 @@ def get_product_details():
         product_id = request.form['productIdToShow']
 
         # Fetch product details from the database
-        execute_query("SELECT * FROM products WHERE ProductID = %s", (product_id,))
+        cursor.execute("SELECT * FROM products WHERE ProductID = %s", (product_id,))
         product_details = cursor.fetchone()
 
         if product_details:
@@ -194,6 +205,7 @@ def get_product_details():
         else:
             # If product not found, return an error message
             return render_template('product_details.html', error_message="Product not found")
+
 
 # Finance department dashboard route
 @app.route('/finance/dashboard')
@@ -204,23 +216,23 @@ def finance_dashboard():
 @app.route('/sales/dashboard')
 def sales_dashboard():
     user_query = "SELECT FirstName, LastName,Position FROM employees WHERE Email = %s"
-    execute_query(user_query, (User_Email,))
+    cursor.execute(user_query, (User_Email,))
     user_data = cursor.fetchone()
     user_name = f"{user_data[0]} {user_data[1]} "
     position = f"{user_data[2]}"
-    execute_query('SELECT sum(Quantity),sum(TotalAmount) FROM orders WHERE OrderDate = CURDATE()')
+    cursor.execute('SELECT sum(Quantity),sum(TotalAmount) FROM orders WHERE OrderDate = CURDATE()')
     daysales = cursor.fetchone()
-    execute_query('SELECT sum(Quantity),sum(TotalAmount) FROM orders WHERE YEAR(OrderDate) = YEAR(CURDATE()) AND MONTH(OrderDate) = MONTH(CURDATE()) ')
+    cursor.execute('SELECT sum(Quantity),sum(TotalAmount) FROM orders WHERE YEAR(OrderDate) = YEAR(CURDATE()) AND MONTH(OrderDate) = MONTH(CURDATE()) ')
     monthsales = cursor.fetchone()
-    execute_query('SELECT sum(Quantity),sum(TotalAmount) FROM orders  WHERE YEAR(OrderDate) = YEAR(CURDATE()) ')
+    cursor.execute('SELECT sum(Quantity),sum(TotalAmount) FROM orders  WHERE YEAR(OrderDate) = YEAR(CURDATE()) ')
     yearsales = cursor.fetchone()
-    execute_query('Select * from orders')
-    dataOrders = cursor.fetchall()
-    execute_query('Select * from customers')
+    cursor.execute('Select * from orders')
+    dataOrders=cursor.fetchall()
+    cursor.execute('Select * from customers')
     dataCustomers = cursor.fetchall()
-
-    return render_template('sales_dashboard.html', user_name=user_name, position=position, daysales=daysales, monthsales=monthsales, yearsales=yearsales,
-                           dataOrders=dataOrders, dataCustomers=dataCustomers)
+    
+    return render_template('sales_dashboard.html',user_name=user_name,position=position,daysales=daysales,monthsales=monthsales,yearsales=yearsales,
+                           dataOrders=dataOrders,dataCustomers=dataCustomers)
 
 @app.route('/add_customer', methods=['POST'])
 def add_customer():
@@ -232,7 +244,7 @@ def add_customer():
         customer_address = request.form['customerAddress']
 
         # Insert data into the customers table
-        execute_query("INSERT INTO customers (CustomerName, ContactNumber, Email, Address) VALUES (%s, %s, %s, %s)", (customer_name, customer_phone, customer_email, customer_address))
+        cursor.execute("INSERT INTO customers (CustomerName, ContactNumber, Email, Address) VALUES (%s, %s, %s, %s)", (customer_name, customer_phone, customer_email, customer_address))
         db.commit()
 
         # Redirect to the sales dashboard after adding the customer
@@ -250,33 +262,35 @@ def add_order():
 
         # Insert data into the orders table
         try:
-            execute_query("INSERT INTO orders (OrderDate, CustomerID, ProductID, Quantity, TotalAmount) VALUES (%s, %s, %s, %s, %s)", (order_date, customer_id, product_id, quantity, total_amount))
+            cursor.execute("INSERT INTO orders (OrderDate, CustomerID, ProductID, Quantity, TotalAmount) VALUES (%s, %s, %s, %s, %s)", (order_date, customer_id, product_id, quantity, total_amount))
             db.commit()
             return "Order added successfully!", 200
         except Exception as e:
             print("Error:", e)
             db.rollback()
-            return "Failed to add order."
+            return "Failed to add order.",
+
 
 # HR department dashboard route
 @app.route('/hr/dashboard')
 def hr_dashboard():
-    execute_query("Select * from employees")
+    cursor.execute("Select * from employees")
     dataEmployees = cursor.fetchall()
     user_query = "SELECT FirstName, LastName,Position FROM employees WHERE Email = %s"
-    execute_query(user_query, (User_Email,))
+    cursor.execute(user_query, (User_Email,))
     user_data = cursor.fetchone()
     user_name = f"{user_data[0]} {user_data[1]} "
     position = f"{user_data[2]}"
-    execute_query('SELECT count(*) FROM employees ')
+    cursor.execute('SELECT count(*) FROM employees ')
     totalEmployees = cursor.fetchone()
-    execute_query('SELECT count(*) FROM employees where position="Manager" ')
+    cursor.execute('SELECT count(*) FROM employees where position="Manager" ')
     totalManagers = cursor.fetchone()
-    execute_query('SELECT count(*) FROM employees where Gender="Female" ')
+    cursor.execute('SELECT count(*) FROM employees where Gender="Female" ')
     totalFemales = cursor.fetchone()
 
-    return render_template('hr_dashboard.html', dataEmployees=dataEmployees, user_name=user_name,
-                           position=position, totalEmployees=totalEmployees, totalManagers=totalManagers, totalFemales=totalFemales)
+    return render_template('hr_dashboard.html',dataEmployees=dataEmployees,user_name=user_name,
+                           position=position,totalEmployees=totalEmployees,totalManagers=totalManagers,totalFemales=totalFemales
+                           )
 
 @app.route('/add_employee', methods=['POST'])
 def add_employee():
@@ -293,12 +307,12 @@ def add_employee():
         employee_email = request.form['employeeEmail']
 
         # Insert data into the Employees table
-        execute_query("INSERT INTO employees (FirstName, LastName, DateOfBirth, Gender, Department, Position, Salary, Password, Email) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (employee_first_name, employee_last_name, employee_date_of_birth, employee_gender, employee_department, employee_position, employee_salary, employee_password, employee_email))
+        cursor.execute("INSERT INTO employees (FirstName, LastName, DateOfBirth, Gender, Department, Position, Salary, Password, Email) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (employee_first_name, employee_last_name, employee_date_of_birth, employee_gender, employee_department, employee_position, employee_salary, employee_password, employee_email))
         db.commit()
 
         # Redirect to the manager dashboard or any other page as needed
         return redirect(url_for('hr_dashboard'))
-
+    
 @app.route('/delete_employee', methods=['POST'])
 def delete_employee():
     if request.method == 'POST':
@@ -307,7 +321,7 @@ def delete_employee():
 
         # Perform the deletion operation
         delete_query = "DELETE FROM employees WHERE EmployeeID = %s"
-        execute_query(delete_query, (employee_id,))
+        cursor.execute(delete_query, (employee_id,))
         db.commit()
 
         # Optionally, you can return a response to indicate success
