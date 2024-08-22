@@ -12,7 +12,7 @@ def connect_to_database():
         db = pymysql.connect(
             host="149.100.151.103",
             user="u212553073_nikhil_pro1",
-            password="l!LWR!R@p8",
+            password="Nikhil@1234",
             database="u212553073_nikhil_pro1"
         )
         return db
