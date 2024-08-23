@@ -10,10 +10,10 @@ app.secret_key = 'your_secret_key'
 def connect_to_database():
     try:
         db = pymysql.connect(
-            host="149.100.151.103",
-            user="u212553073_nikhil_pro1",
-            password="l!LWR!R@p8",
-            database="u212553073_nikhil_pro1"
+            host="82.197.82.30",
+            user="u212553073_nk2",
+            password="K@&1e5|y2V",
+            database="u212553073_nk2"
         )
         return db
     except pymysql.Error as e:
